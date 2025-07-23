@@ -1,7 +1,8 @@
 import path from "path";
 import {spawn} from "child_process";
 import {v4 as uuidv4} from "uuid";
-import {Job, JobStatus} from "./types";
+import {iJob} from "./types";
+import logger from "./logger";
 
 class LimitedBuffer {
     private buffer: string[] = [];
@@ -26,16 +27,16 @@ class LimitedBuffer {
     }
 }
 
-const jobStore= new Map<string, Job>();
+const jobStore= new Map<string, iJob>();
 
 
-export function getAllJobs(): Job[] {
+export function getAllJobs(): iJob[] {
     return [...jobStore.values()];
 }
 
-export function startJob(jobName: string, process:string, args: string[], retryCountMax:number, timeoutMs:number): Job {
+export function startJob(jobName: string, process:string, args: string[], retryCountMax:number, timeoutMs:number): iJob {
     const id = uuidv4();
-    const job: Job = {
+    const job: iJob = {
         id,
         process,
         jobName,
@@ -51,7 +52,7 @@ export function startJob(jobName: string, process:string, args: string[], retryC
     return job;
 }
 
-function runJobProcess(job: Job) {
+function runJobProcess(job: iJob) {
     if(!job.process)
         return;
 
@@ -66,7 +67,7 @@ function runJobProcess(job: Job) {
     else{
         proc = spawn(job.process, job.args);
     }
-    console.log(`Starting job: ${job.jobName} with PID: ${proc.pid}`);
+    logger.info(`Starting job: ${job.jobName} with PID: ${proc.pid}`);
 
     job.status = "running";
     jobStore.set(job.id, job);
@@ -75,11 +76,11 @@ function runJobProcess(job: Job) {
     const err = new LimitedBuffer(10);
     proc.stdout.on("data", data => {
         out.add(data);
-        console.log(`stdout: ${data}`);
+        logger.info(`stdout: ${data}`);
     });
     proc.stderr.on("data", data => {
         err.add(data);
-        console.log(`stderr: ${data}`)
+        logger.info(`stderr: ${data}`)
     });
 
     // Set up timeout
@@ -124,8 +125,8 @@ function runJobProcess(job: Job) {
     });
 }
 
-function retryJob(originalJob: Job) {
-    const retryJob: Job = {
+function retryJob(originalJob: iJob) {
+    const retryJob: iJob = {
         ...originalJob,
         id: uuidv4(),
         retryCount: (originalJob.retryCount || 0) + 1,

@@ -1,6 +1,7 @@
 import * as dotenv from 'dotenv';
 import axios from 'axios';
-import { Job } from "./types";
+import { iJob } from "./types";
+import logger from "./logger";
 
 
 // Your API key from environment variables
@@ -22,7 +23,7 @@ class AnalysisResult {
         return hash;
     }
 
-    setResult(jobs:Job[], result:any) {
+    setResult(jobs:iJob[], result:any) {
 
         if(result?.analysis?.chartConfiguration ){
             result.analysis.chartVisualizationUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(result.analysis.chartConfiguration))}`;
@@ -33,7 +34,7 @@ class AnalysisResult {
         this._result = result;
     }
 
-    compareInput(jobs:Job[]){
+    compareInput(jobs:iJob[]){
         const hash = this.hashString(JSON.stringify(jobs));
         return this._input === hash;
     }
@@ -45,13 +46,13 @@ class AnalysisResult {
 const lastAnalytics = new AnalysisResult();
 
 
-export async function analyzeProcessLog(jobs: Job[]) {
+export async function analyzeProcessLog(jobs: iJob[]) {
     if(!jobs || jobs.length === 0) {
         return {result: {}, metadata: {analysis_date: new Date().toISOString(), input_records: 0}};
     }
 
     if(lastAnalytics.compareInput(jobs)) {
-        console.log('Returning cached analysis for the same input size:', jobs.length);
+        logger.info('Returning cached analysis for the same input size:', jobs.length);
         return lastAnalytics.result;
     }
 
@@ -90,7 +91,7 @@ Return the response as a JSON object with an "analysis" key containing the struc
             }
         );
 
-        console.log('Analysis Response:', JSON.stringify(response.data, null, 2));
+        logger.info('Analysis Response:', JSON.stringify(response.data, null, 2));
 
         // Handle stringified content
         const content = response.data.choices[0].message.content;
@@ -98,14 +99,14 @@ Return the response as a JSON object with an "analysis" key containing the struc
         try {
             parsedContent = typeof content === 'string' ? JSON.parse(content) : content;
         } catch (parseError) {
-            console.error('Failed to parse message.content as JSON:', parseError);
-            console.error('Raw content:', content);
+            logger.error('Failed to parse message.content as JSON:', parseError);
+            logger.error('Raw content:', content);
             throw new Error('Response content is not valid JSON');
         }
 
         // Check for truncation (incomplete JSON structure)
         if (!parsedContent.analysis || !parsedContent.metadata) {
-            console.error('Response appears truncated. Missing analysis or metadata:', parsedContent);
+            logger.error('Response appears truncated. Missing analysis or metadata:', parsedContent);
             throw new Error('Response JSON is incomplete');
         }
 
@@ -114,9 +115,9 @@ Return the response as a JSON object with an "analysis" key containing the struc
 
     } catch (error) {
         if (axios.isAxiosError(error)) {
-            console.error('Error making API request:', error.response ? error.response.data : error.message);
+            logger.error('Error making API request:', error.response ? error.response.data : error.message);
         } else {
-            console.error('Unexpected error:', error);
+            logger.error('Unexpected error:', error);
         }
         throw error;
     }

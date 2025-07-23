@@ -1,6 +1,6 @@
 export type JobStatus = "created" | "running" | "completed" | "crashed" | "retried" | "timeout";
 
-export interface Job {
+export interface iJob {
   id: string;
   process?: string;
   papaId?: string;
@@ -17,3 +17,12 @@ export interface Job {
   retryCountMax?: number;
 }
 
+
+
+export interface iRequestJobCreate {
+    jobName:string;
+    process:string;
+    arguments?: string[];
+    retryCountMax?:number;
+    timeoutMs?: number;
+}

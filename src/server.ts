@@ -1,8 +1,15 @@
 import express from "express";
+import helmet from "helmet";
+import compression from "compression";
+
 import {startJob, getAllJobs} from "./jobManager";
 import { analyzeProcessLog } from "./stats";
+import logger from "./logger";
+import {schemaJob, validateRequest} from "./validators";
+import {iRequestJobCreate} from "./types";
 
 
+//I can use express-async-handler library, but I try to show how to do it manually.ipm i
 const asyncHandler = (fn: any) => (req: any, res:any, next:any) => {
     Promise.resolve(fn(req, res, next)).catch(next);
 };
@@ -10,13 +17,12 @@ const asyncHandler = (fn: any) => (req: any, res:any, next:any) => {
 
 const app = express();
 app.use(express.json());
+app.use(helmet());// Adds security headers to the response
+app.use(compression());// Adds response compression
 
-app.post("/jobs", (req, res) => {
-  const { jobName, process, arguments: args, retryCountMax, timeoutMs } = req.body;
-  if (!jobName || !process || (args && !Array.isArray(args))) {
-    return res.status(400).json({ error: `Invalid request format.`, sample:{jobName: 'my-task-42', process:'dummy-job', arguments: ['17', '7']}});
-  }
-  const job = startJob(jobName, process, args, retryCountMax || 0, timeoutMs || 0);
+app.post("/jobs", validateRequest<iRequestJobCreate>(schemaJob), (req, res) => {
+  const { jobName, process, arguments: args, retryCountMax, timeoutMs } = req.body as iRequestJobCreate;
+  const job = startJob(jobName, process, args||[], retryCountMax || 0, timeoutMs || 0);
   res.status(201).json({ id: job.id, status: job.status });
 });
 
@@ -33,9 +39,16 @@ app.get("/stats", asyncHandler(async (req: express.Request, res: express.Respons
   res.json(stats);
 }));
 
-app.use((err: Error, req: express.Request, res: express.Response) => {
-    console.error(err.stack);
-    res.status(500).json({ error: "Something went wrong" });
+interface CustomError extends Error {
+    status?: number;
+}
+app.use((err: CustomError, req: express.Request, res: express.Response) => {
+    logger.error(err.stack);
+    const status = err.status || 500;
+    res.status(status).json({
+        error: err.message || 'Internal Server Error',
+    });
 });
+
 
 export default app;
