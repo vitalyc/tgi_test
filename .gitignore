@@ -1,0 +1,11 @@
+# Build output
+dist/
+
+# Log files
+logs/
+
+# Node.js dependencies
+node_modules/
+
+# JetBrains IDE settings
+.idea/
