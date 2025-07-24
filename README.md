@@ -45,7 +45,6 @@ npm install
 
 ---
 
----
 ## 🛠️ How to Build Before Run
 This project is written in TypeScript. To build the project before running it:
 ```bash
@@ -57,6 +56,7 @@ You can then run the server using:
 ```bash
 node dist/index.js
 ```
+---
 ## 🖥️ Run the Server
 
 ```bash
@@ -92,3 +92,7 @@ The server provides a Swagger UI for API documentation at: [http://localhost:300
 - Add UI for job monitoring
 - Support more job analysis metrics
 
+---
+## 🙏 Special Thanks
+- **WebStorm AI** — for providing brilliant in-line code comments that improved development speed and readability.
+- **Grok** — for assisting in validating and analyzing data using AI-powered tools.
